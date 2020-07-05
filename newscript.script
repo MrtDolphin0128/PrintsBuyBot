@@ -1,0 +1,205 @@
+var current_print_name="";
+var filename = "prints.xls";
+var find_print_id = function(itname)
+{
+ var i = 0;
+ while(true)
+ {
+	i++;
+	var text = extract("//*[@id='prints']/main[1]/div[1]/div[1]/div[2]/div["+ i +"]/a[1]/p[1]", "text");
+	if(text=='') break;
+	if(text.toLowerCase().indexOf(itname.toLowerCase()) != -1)
+	{
+		current_print_name = text;
+		if(exist_name_from_file(text)>0) 
+		{
+		   current_print_name = "";
+		   continue;
+		}
+		return i;
+	}
+ }
+ current_print_name = "";
+ return 0;
+}
+var find_print_name = function(itname)
+{
+	var i = 0;
+ while(true)
+ {
+	i++;
+	var text = extract("//*[@id='prints']/main[1]/div[1]/div[1]/div[2]/div["+ i +"]/a[1]/p[1]", "text");
+	if(text=='') break;
+	if(text.toLowerCase().indexOf(itname.toLowerCase()) != -1)
+	{
+		return text;
+	}
+ }
+ return "";
+}
+var exist_name_from_file = function(nm)
+{
+  if(nm == "") return -1;
+  var purchased_cnt = parseInt(readCellExcel(filename, 'Sheet1', 3, 0));
+   
+  for(var i = 1; i <= purchased_cnt; i++)
+  {
+	{
+		var purchased = readCellExcel(filename, 'Sheet1', i, 2);
+		if(nm == purchased) return i;
+	}
+  }
+  return -1;
+}
+var click_prints = function()
+{
+	var text = extract("//*[@id='AccessibleNav']/li[1]/a[1]", "text");
+ 	if(text == '')
+	{
+		go("https://store.obeygiant.com/collections/prints");
+		sleep(2, false);
+	}
+	click("//*[@id='AccessibleNav']/li[1]/a[1]");	
+	sleep(2, false);
+}
+var click_cart = function()
+{
+	var text = extract("//*[@id='prints']/div[1]/div[1]/div[1]/div[2]/div[2]/a[1]", "text");
+	if(text == '')
+	{
+		go("https://store.obeygiant.com/cart");
+		sleep(2, false);
+	}
+	click("//*[@id='prints']/div[1]/div[1]/div[1]/div[2]/div[2]/a[1]");	
+	sleep(2, false);
+}
+var click_checkout = function()
+{
+	
+	var aname;
+	var inum;
+	for(var i = 0; i<100;i++)
+	{
+	   var attr_name = extract("//*[@id='your-shopping-cart']/main[1]/div[1]/div[1]/form[1]/div["+i+"]/div[1]/div[2]/input[2]", "name");
+	   if(attr_name == "checkout")
+	   {
+		   aname = attr_name;
+		   inum = i;
+		   break;
+	   }
+	}
+	if(aname == '')
+	{
+		go("https://store.obeygiant.com/cart");
+		sleep(2, false);
+	}
+	click("//*[@id='your-shopping-cart']/main[1]/div[1]/div[1]/form[1]/div["+inum+"]/div[1]/div[2]/input[2]");
+	sleep(3);
+}
+var click_print_by_id= function(id)
+{
+    click("//*[@id='prints']/main[1]/div[1]/div[1]/div[2]/div["+ id +"]/a[1]/p[1]");
+	sleep(1);
+}
+var click_addcart= function()
+{
+	click("//*[@id='AddToCart']");
+	sleep(2);
+}
+var input_customer_info = function(cn,pr,po)
+{
+	var text = extract("/html[1]/body[1]/div[2]/div[1]/div[2]/div[2]/div[1]/form[1]/div[1]/div[1]/div[1]/div[1]/h2[1]", "text");
+	if(text == '' || text == null) return;
+	fill("//*[@id='checkout_email']", "input_email");
+	fill("//*[@id='checkout_shipping_address_first_name']", "input_first");	
+	fill("//*[@id='checkout_shipping_address_last_name']", "input_last");	
+	fill("//*[@id='checkout_shipping_address_company']", "input_company");	
+	fill("//*[@id='checkout_shipping_address_address1']", "input_address");
+	fill("//*[@id='checkout_shipping_address_address2']", "input_apt");
+	fill("//*[@id='checkout_shipping_address_city']", "input_city");
+	if(cn!='' && cn != 'Default')
+	{
+		filldropdown("//*[@id='checkout_shipping_address_country']", cn);
+		filldropdown("//*[@id='checkout_shipping_address_province']", pr);
+	}
+	fill("//*[@id='checkout_shipping_address_zip']", po);
+	fill("//*[@id='checkout_shipping_address_phone']", "input_phone");	
+	click("/html[1]/body[1]/div[2]/div[1]/div[2]/div[2]/div[1]/form[1]/div[2]/button[1]");
+	sleep(1);
+}
+var input_payment_method = function(cardnum,nameoncard,expmm,expyyyy,ccv)
+{
+	fill("//*[@id='checkout_credit_card_number']", cardnum);
+	fill("//*[@id='checkout_credit_card_name']", nameoncard);
+	filldropdown("//*[@id='checkout_credit_card_month']", expmm);
+	filldropdown("//*[@id='checkout_credit_card_year']", expyyyy);
+	fill("//*[@id='checkout_credit_card_verification_value']", ccv);
+}
+var click_paying_butt = function(intv)
+{
+	click("/html[1]/body[1]/div[2]/div[1]/div[2]/div[2]/div[1]/form[1]/div[2]/button[1]");
+	sleep(intv);
+}
+/////////////////////////////////////////////////////////////////////
+
+var pur_print_keyword = function(keyword)
+{
+	click_prints();
+	var pid = find_print_id(keyword);
+	if(pid == 0) return -1;
+	click_print_by_id(pid);
+	click_addcart();
+	click_checkout();
+	input_customer_info("input_country","input_province", "input_postal");
+	click_paying_butt(4);// continue to payment method
+	click_paying_butt(4);// continue to payment method
+	input_payment_method("input_cardnum", "input_nameoncard", "input_expmm","input_expyyyy", "input_cvv");
+	click_paying_butt(4);// real complete order
+	return 1;
+}
+var purchase_from_file = function()
+{
+	var mpty_counted = 0;
+	var total = readCellExcel(filename, 'Sheet1', 1, 0);
+	if(total == 0)
+	{
+		alert("You haven't have any print name to purchase. Please check prints.xls");
+		runcommand('excel.exe', filename);
+		return -1;
+	}
+	for(var i = 1; i<=total; i++)
+	{
+		var it_nm = readCellExcel(filename, 'Sheet1', i, 1);
+		if(it_nm == "" || it_nm == null) 
+		{
+			mpty_counted++;
+			continue;
+		}
+		//alert(it_nm);
+		var ret = pur_print_keyword(it_nm);
+		if(ret>0)
+		{
+			var field1 = 'B'+(i+1);
+			writeCellExcel(filename, 'Sheet1',field1,"");
+
+			var purchased_cnt = parseInt(readCellExcel(filename, 'Sheet1', 3, 0));
+			writeCellExcel(filename, 'Sheet1','A4', parseInt((purchased_cnt+1)));
+			
+			var field2 = 'C'+(purchased_cnt+2);
+			writeCellExcel(filename, 'Sheet1',field2,current_print_name);
+		}
+	}
+	if(mpty_counted == total && total != 0)
+	{
+	   writeCellExcel(filename, 'Sheet1','A2','0');
+ 	   alert("You have finished purchase of new prints. Please add similar names of new projects into prints.xls.");
+  	   runcommand('excel.exe', filename);
+	   return -1;
+	}
+	return 1;
+}
+while(true)
+{
+  var ret = purchase_from_file();
+  if(ret == -1) break;
+}
